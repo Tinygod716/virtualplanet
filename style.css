@@ -1,0 +1,42 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* 防止出现滚动条 */
+    background-color: #000; /* 黑色背景 */
+}
+
+/* 确保 canvas 占满屏幕 */
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* 弹窗样式 */
+.panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* 完美居中 */
+    width: 300px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.9); /* 半透明白色背景 */
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    font-family: sans-serif;
+    text-align: center;
+    display: block; /* 默认显示，JS控制隐藏 */
+    z-index: 100; /* 保证在最上层 */
+    display: none; /* 初始隐藏 */
+}
+
+/* 关闭按钮 */
+#close-btn {
+    margin-top: 15px;
+    padding: 5px 15px;
+    cursor: pointer;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
