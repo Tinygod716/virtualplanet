@@ -5,10 +5,10 @@ import gsap from 'gsap';
 // --- 1. 场景初始化 ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-const currentFocus = new THREE.Vector3(0, 0, 0); // 当前相机聚焦点
+const currentFocus = new THREE.Vector3(0, 0, 0); 
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 3; 
+camera.position.z = 5; // 稍微拉远一点初始距离，防止地球太大堵脸
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -21,119 +21,166 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 2);
 dirLight.position.set(5, 3, 5);
 scene.add(dirLight);
 
-// --- 2. 定义 Tag 数据 (你可以随意修改这里) ---
-// lat: 纬度, lon: 经度
+// --- 2. 定义 Tag 数据 ---
 const tagData = [
     { lat: 31.23, lon: 121.47, title: "Shanghai", desc: "This is Shanghai, China." },
     { lat: 51.50, lon: -0.12, title: "London", desc: "Big Ben is here." },
     { lat: 40.71, lon: -74.00, title: "New York", desc: "The city that never sleeps." },
-    { lat: -33.86, lon: 151.20, title: "Sydney", desc: "Opera House view." }
+    { lat: -10.86, lon: 100.20, title: "Sydney", desc: "Opera House view." }
 ];
 
-// 用来存储所有生成的 Tag 物体，方便稍后做点击检测
 let tags = []; 
 let earthModel = null;
+let tagTemplate = null; 
+let digitalplanet = null;
 
-// --- 3. 辅助函数：经纬度转 3D 坐标 ---
+// --- 3. 辅助函数 ---
 function latLonToVector3(lat, lon, radius) {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
-    
-    // 球坐标转直角坐标公式
     const x = -(radius * Math.sin(phi) * Math.cos(theta));
     const z = (radius * Math.sin(phi) * Math.sin(theta));
     const y = (radius * Math.cos(phi));
-
     return new THREE.Vector3(x, y, z);
 }
 
-// --- 4. 加载模型并生成 Tag ---
+// --- 4. 加载模型逻辑 (关键修复点) ---
 const loader = new GLTFLoader();
 
-loader.load('models/earth.glb', (gltf) => {
-    earthModel = gltf.scene;
-
-    earthModel.scale.set(2, 2, 2); // 根据需要调整大小
+// ✨ 修复 1：链式加载
+// 先加载 Tag (Demon)，加载完之后再加载地球
+loader.load('models/demon.glb', (gltf) => {
+    tagTemplate = gltf.scene;
     
-    // 自动居中修正
-    const box = new THREE.Box3().setFromObject(earthModel);
-    const center = box.getCenter(new THREE.Vector3());
-    earthModel.position.sub(center);
-
-    scene.add(earthModel);
-
-    // 🏷️ 关键步骤：在地球上生成 Tag
-    // 先估算地球半径 (如果不准，手动调整这个数字，比如 1.05)
-    const earthRadius = 1.01; 
-
-    tagData.forEach(data => {
-        // 创建一个小球作为 Tag (稍后你可以换成图片 Sprite)
-        const geometry = new THREE.SphereGeometry(0.02, 16, 16);
-        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // 红色
-        const tagMesh = new THREE.Mesh(geometry, material);
-
-        // 计算位置
-        const pos = latLonToVector3(data.lat, data.lon, earthRadius);
-        tagMesh.position.copy(pos);
-
-        // 将数据绑定到模型对象上，方便点击时读取
-        tagMesh.userData = { title: data.title, desc: data.desc };
-
-        // ⚠️ 把 Tag 加到地球上，这样它会跟着地球转！
-        earthModel.add(tagMesh);
-        
-        // 存入数组，供射线检测用
-        tags.push(tagMesh);
-    });
+    // ✨ 修复 2：在回调内部设置缩放
+    tagTemplate.scale.set(0.1, 0.1, 0.1); 
 
 }, undefined, (error) => {
-    console.error(error);
+    console.error('Demon 模型加载失败:', error);
 });
 
-// --- 5. 交互逻辑 (Raycaster) ---
+loader.load('models/digital.glb', (gltf) => {
+    digitalplanet = gltf.scene;
+    
+    // ✨ 修复 2：在回调内部设置缩放
+    digitalplanet.scale.set(0.2, 0.2, 0.2); 
+    
+    // ✨ 修复 3：Tag 准备好后，才开始加载地球
+    loadEarth(); 
+
+}, undefined, (error) => {
+    console.error('Demon 模型加载失败:', error);
+});
+
+function loadEarth() {
+    loader.load('models/earth.glb', (gltf) => {
+        earthModel = gltf.scene;
+        earthModel.scale.set(3, 3, 3); 
+        
+        const box = new THREE.Box3().setFromObject(earthModel);
+        const center = box.getCenter(new THREE.Vector3());
+        earthModel.position.sub(center);
+
+        scene.add(earthModel);
+
+        const earthRadius = 1.01; 
+
+        // 遍历所有地点数据
+        tagData.forEach(data => {
+            let tagMesh; // 先定义一个变量，用来存最终生成的物体
+
+            // ✨ 关键判断：只想让 "Shanghai" 变成恶魔模型
+            // 你可以把 'Shanghai' 改成任何你想要的那个地点的 title
+            if (data.title === "Shanghai" && tagTemplate) {
+                // --- A 计划：使用 Demon 模型 ---
+                tagMesh = tagTemplate.clone(); 
+                // 模型通常需要调整方向，让它“站”在地球上
+                tagMesh.lookAt(0, 0, 0); 
+            } else if (data.title === "London" && digitalplanet) {
+                tagMesh = digitalplanet.clone();
+                tagMesh.lookAt(0, 0, 0);
+            } else {
+                // --- B 计划：使用普通红色小球 ---
+                const geometry = new THREE.SphereGeometry(0.02, 16, 16);
+                const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                tagMesh = new THREE.Mesh(geometry, material);
+            }
+
+            // --- 下面是通用的定位逻辑 (对模型和小球都适用) ---
+            
+            // 1. 计算坐标
+            const pos = latLonToVector3(data.lat, data.lon, earthRadius);
+            tagMesh.position.copy(pos);
+
+            // 2. 绑定数据 (这是点击弹窗的关键)
+            // 注意：不管是模型还是小球，都把数据绑在它们身上
+            tagMesh.userData = { title: data.title, desc: data.desc };
+
+            // 3. 加入场景
+            earthModel.add(tagMesh);
+            tags.push(tagMesh);
+        });
+
+    }, undefined, (error) => {
+        console.error('地球模型加载失败:', error);
+    });
+}
+
+// --- 5. 交互逻辑 ---
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-
-// 定义默认速度和慢速
 const NORMAL_SPEED = 0.002;
-const SLOW_SPEED = 0.0002; // 慢速
-let currentSpeed = NORMAL_SPEED; // 当前使用的速度
+const SLOW_SPEED = 0.0002;
+let currentSpeed = NORMAL_SPEED;
 
-// 监听鼠标点击 (保持不变)
 window.addEventListener('click', (event) => {
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObjects(tags);
+
+    // ✨ 修复 4：添加 true 开启递归检测 (检测复杂的模型结构)
+    const intersects = raycaster.intersectObjects(tags, true);
+    
     if (intersects.length > 0) {
-        const selectedTag = intersects[0].object;
-        showPanel(intersects[0].object.userData);
-        zoomToTag(selectedTag);
+        // intersects[0].object 可能是模型的一个子部件(比如恶魔的手)
+        // 我们需要找到它最顶层的那个 Group (才有 userData)
+        // 这里简单处理：直接找 tags 数组里对应的那个
+        
+        // 更稳妥的方法是向上遍历，但因为我们把 userData 绑在了 clone 的 root 上
+        // 这里我们可以尝试获取它的父级，或者利用 Three.js 的冒泡机制
+        // 简单写法：直接取第一个命中的物体的【根父级】或者直接用它的 userData (如果运气好绑在 mesh 上)
+        
+        // 更加通用的做法：向上寻找拥有 userData 的父级
+        let target = intersects[0].object;
+        while(target.parent && !target.userData.title && target !== scene) {
+            target = target.parent;
+        }
+
+        if(target.userData.title) {
+            showPanel(target.userData);
+            zoomToTag(target);
+        }
     }
 });
 
-// --- ✨ 修正后的鼠标悬停逻辑 ---
 window.addEventListener('mousemove', (event) => {
-    // 1. 更新鼠标坐标
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    // 2. 射线检测
     raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObjects(tags);
+    
+    // ✨ 修复 4：同样开启递归
+    const intersects = raycaster.intersectObjects(tags, true);
 
-    // 3. 这里的逻辑只负责“改变状态”，不负责“运行动画”
     if (intersects.length > 0) {
         document.body.style.cursor = 'pointer';
-        currentSpeed = SLOW_SPEED; // 悬停时：设为慢速
+        currentSpeed = SLOW_SPEED;
     } else {
         document.body.style.cursor = 'default';
-        currentSpeed = NORMAL_SPEED; // 移开时：设为正常速度
+        currentSpeed = NORMAL_SPEED;
     }
 });
 
-// ... (UI 控制函数 showPanel, closeBtn 等保持不变)
-// UI 控制函数
+// UI 控制
 const panel = document.getElementById('info-panel');
 const titleEl = document.getElementById('panel-title');
 const contentEl = document.getElementById('panel-content');
@@ -144,7 +191,6 @@ function showPanel(data) {
     contentEl.innerText = data.desc;
     panel.classList.remove('hidden', 'slide-right');
     panel.classList.add('slide-left');
-    // (可选) 如果你想点击时暂停地球旋转，可以在这里设置一个标志位
     isPaused = true;
 }
 
@@ -152,14 +198,14 @@ closeBtn.addEventListener('click', () => {
     panel.classList.remove('slide-left');
     panel.classList.add('slide-right');  
     setTimeout(() => {
-        panel.classList.add('hidden'); // 动画播完了，现在可以藏起来了
-        panel.classList.remove('slide-right'); // 清理动画类，为下次显示保持干净
+        panel.classList.add('hidden'); 
+        panel.classList.remove('slide-right');
     }, 500);
-    isPaused = false; // 恢复旋转
+    isPaused = false; 
     resetCamera();
 });
 
-// --- 6. 动画循环 (只保留这一个！) ---
+// --- 6. 动画循环 ---
 let isPaused = false; 
 
 window.addEventListener('resize', () => {
@@ -174,32 +220,23 @@ function animate() {
     if (earthModel && !isPaused) {
         earthModel.rotation.y += currentSpeed;
     }
-    
-    // ✨ 核心修改：让相机每一帧都盯着动态焦点看
     camera.lookAt(currentFocus); 
-
     renderer.render(scene, camera);
 }
-
-// 启动动画 (只启动一次)
 animate();
 
-// --- ✨ 缺失的镜头控制函数 ✨ ---
-
-// 1. 记录相机初始位置，方便重置 (和你初始化时的 camera.position.z = 3 对应)
-const initialCameraPos = new THREE.Vector3(0, 0, 3); 
+// --- 镜头控制 ---
+const initialCameraPos = new THREE.Vector3(0, 0, 5); // 确保这里和初始化的一致
 
 function zoomToTag(tagMesh) {
-    // 获取 Tag 在世界空间中的绝对位置 (因为地球在转，必须用 getWorldPosition)
     const tagWorldPos = new THREE.Vector3();
     tagMesh.getWorldPosition(tagWorldPos);
 
-    // 计算相机的新位置：
-    // 地球缩放是 2，半径约为 2。
-    // 我们把相机放在 Tag 延长线 3.5 的位置 (距离表面 1.5)，既能看清又不会太近
-    const cameraTargetPos = tagWorldPos.clone().normalize().multiplyScalar(1); 
+    // ✨ 修复 5：距离修正
+    // 地球 scale 是 2，半径约 2。设为 3.0 才能在表面之外。
+    // 如果设为 1，相机就进地核了。
+    const cameraTargetPos = tagWorldPos.clone().normalize().multiplyScalar(3.0); 
 
-    // 动画 A: 移动相机
     gsap.to(camera.position, {
         x: cameraTargetPos.x,
         y: cameraTargetPos.y,
@@ -208,7 +245,6 @@ function zoomToTag(tagMesh) {
         ease: "power2.inOut"
     });
 
-    // 动画 B: 移动视线焦点 (让相机盯着 Tag 看)
     gsap.to(currentFocus, {
         x: tagWorldPos.x,
         y: tagWorldPos.y,
@@ -219,7 +255,6 @@ function zoomToTag(tagMesh) {
 }
 
 function resetCamera() {
-    // 动画 A: 相机回到初始位置
     gsap.to(camera.position, {
         x: initialCameraPos.x,
         y: initialCameraPos.y,
@@ -228,7 +263,6 @@ function resetCamera() {
         ease: "power2.inOut"
     });
 
-    // 动画 B: 视线焦点回到地球中心 (0,0,0)
     gsap.to(currentFocus, {
         x: 0,
         y: 0,
