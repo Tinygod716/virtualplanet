@@ -5,6 +5,23 @@ body {
     background-color: #000; /* 黑色背景 */
 }
 
+h1 {
+    position: absolute;
+    top: 20%; /* 放在屏幕上方 20% 的位置 */
+    left: 50%;
+    transform: translateX(-50%); /* 水平居中 */
+    color: white;
+    font-size: 4rem; /* 大字体 */
+    font-family: sans-serif;
+    text-transform: uppercase; /* 全大写 */
+    letter-spacing: 10px; /* 字间距 */
+    z-index: 10; /* ⚠️ 关键：必须比 canvas (默认0) 高，否则会被地球盖住 */
+    pointer-events: none; /* 让鼠标可以穿透文字点到后面的地球 */
+    margin: 0;
+    width: 100%;
+    text-align: center;
+}
+
 /* 确保 canvas 占满屏幕 */
 canvas {
     display: block;

@@ -159,6 +159,8 @@ window.addEventListener('click', (event) => {
         if(target.userData.title) {
             showPanel(target.userData);
             zoomToTag(target);
+
+            updateTitle(target.userData.title);
         }
     }
 });
@@ -189,8 +191,10 @@ const closeBtn = document.getElementById('close-btn');
 function showPanel(data) {
     titleEl.innerText = data.title;
     contentEl.innerText = data.desc;
+    setTimeout(() => {
     panel.classList.remove('hidden', 'slide-right');
     panel.classList.add('slide-left');
+    }, 1000);
     isPaused = true;
 }
 
@@ -203,6 +207,7 @@ closeBtn.addEventListener('click', () => {
     }, 500);
     isPaused = false; 
     resetCamera();
+    updateTitle("MY 3D WORLD");
 });
 
 // --- 6. 动画循环 ---
@@ -271,3 +276,48 @@ function resetCamera() {
         ease: "power2.inOut"
     });
 }
+
+// --- ✨ 动态标题控制函数 ---
+
+function updateTitle(text) {
+    const title = document.querySelector('h1');
+    if (!title) return;
+
+    // 1. 清空旧文字
+    title.innerHTML = ''; 
+
+    // 2. 重新拆分新文字
+    text.split('').forEach(char => {
+        const span = document.createElement('span');
+        // 处理空格，否则空格会变成塌缩的 0 宽元素
+        if (char === ' ') {
+            span.innerHTML = '&nbsp;';
+        } else {
+            span.innerText = char;
+        }
+        span.style.display = 'inline-block'; 
+        title.appendChild(span);
+    });
+
+    // 3. 播放 GSAP 进场动画
+    // 这里用 fromTo 确保每次都能从下方飞上来
+    gsap.fromTo("h1 span", 
+        { 
+            y: 50,          // 初始位置：下方 50px
+            opacity: 0,     // 初始透明度
+            rotation: 90    // 初始旋转
+        },
+        { 
+            y: 0,           // 结束位置
+            opacity: 1, 
+            rotation: 0, 
+            duration: 0.8, 
+            stagger: 0.05,  // 每个字母间隔 0.05秒
+            ease: "back.out(1.7)",
+            overwrite: "auto" // 防止多次快速点击导致动画冲突
+        }
+    );
+}
+
+// ✨ 初始化时，先显示默认标题
+updateTitle("MY 3D WORLD");
