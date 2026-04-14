@@ -1,42 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>3D Earth Project</title>
-    <script src="script.js" defer></script>
-    <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Knewave&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-</head>
-<body>
-    <h1>欢迎来到星球模拟器</h1>
-<div id="info-panel" class="panel">
-    <h2 id="panel-title">欢迎来到星球模拟器</h2>
-    <p id="panel-content">点击任意星球来查看信息</p>
-    <button id="close-btn">got it</button>
-</div>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Magical Planet Explorer</title>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Sniglet:wght@400;800&display=swap"
+        rel="stylesheet"
+    />
 
+    <!-- Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Import Maps -->
     <script type="importmap">
     {
         "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-            "gsap": "https://unpkg.com/gsap@3.12.5/index.js" 
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
         }
     }
-</script>
+    </script>
+</head>
+<body>
+    <h1>奇妙星球之旅</h1>
 
+    <!-- 互动指引 -->
+    <div id="interaction-guide" class="glass-card">
+        <span class="guide-icon">✨</span>
+        <span class="guide-text">Click on any planet to explore!</span>
+    </div>
+
+    <!-- Left: 魔法设定面板 -->
+    <div id="top-left-panel" class="glass-card hidden">
+        <div class="tl-header">✨ Planet Lore</div>
+        <div class="tl-title" id="tl-name">WONDERLAND</div>
+
+        <div class="tl-group">
+            <span class="tl-label">MAGICAL CORE</span>
+            <div class="tl-value" id="tl-resource"></div>
+        </div>
+
+        <div class="tl-group">
+            <span class="tl-label">SPECIALTY</span>
+            <div class="tl-value" id="tl-element"></div>
+        </div>
+
+        <div class="tl-group">
+            <span class="tl-label">THEME</span>
+            <div class="tl-value" id="tl-theme"></div>
+        </div>
+    </div>
+
+    <!-- Center: 图文详情面板 -->
+    <div id="info-panel" class="hidden">
+        <div class="glass-card panel-card">
+            <h2 class="card-title" id="panel-title">TITLE</h2>
+            <img id="panel-image" src="" alt="Location Image" class="hidden" />
+            <p id="panel-desc">Description goes here...</p>
+            <button id="close-btn" class="cute-btn">Let's Fly Back!</button>
+        </div>
+    </div>
+
+    <!-- Right: 魔法环境数据 -->
+    <div id="hud-panel" class="glass-card hidden">
+        <h2 class="card-title hud-title">Environment</h2>
+
+        <div class="hud-row">
+            <div class="hud-icon"><i class="fas fa-temperature-three-quarters"></i></div>
+            <div class="hud-data">
+                <div class="hud-val"><span id="hud-temp">0</span>°C</div>
+                <div class="hud-label">Temperature</div>
+            </div>
+        </div>
+
+        <div class="hud-row">
+            <div class="hud-icon"><i class="fas fa-droplet"></i></div>
+            <div class="hud-data">
+                <div class="hud-val" id="hud-hum">0%</div>
+                <div class="hud-label">Humidity</div>
+            </div>
+        </div>
+
+        <div class="hud-energy">
+            <div class="hud-label hud-energy-label">Magic Energy Level</div>
+            <div class="magic-bar-container">
+                <div class="magic-bar-fill" id="hud-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
